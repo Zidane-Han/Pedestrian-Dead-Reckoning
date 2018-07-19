@@ -4,8 +4,9 @@ clc
 
 % SL = 0.2844 + 0.2231*frequency + 0.0426*AV
 
-load ../SLE/SLdata.mat
-trial = L;
+load ../context_demo/four/SensorLog.mat
+trial = SensorLog;
+% trial = L;
 
 %% preprocessing
 yaw = trial(:,13);
@@ -39,7 +40,7 @@ bandPass = filtfilt(a,b,acc);
 % Find signal peaks - peaks under a threshold value are considered as noise.
 [PkValue, PeakLocation] = findpeaks(bandPass, 'MINPEAKHEIGHT', 0.25);
 
-%% time interval (0.4s between steps)
+%% time interval (steps between 0.4s and 2s)
 PkValue(:,2) = trial(PeakLocation,1);
 PkValue(2:end,2) = PkValue(2:end,2)-PkValue(1:end-1,2);
 index = find(PkValue(:,2)<400);
@@ -61,6 +62,7 @@ StepCount = length(PeakLocation); % step number
 %% position update
 PositionX = zeros(StepCount, 1);
 PositionY = zeros(StepCount, 1);
+distance = 0;
 for k = 1:StepCount-1
     pos_start = PeakLocation(k);
     pos_end = PeakLocation(k+1);
@@ -72,15 +74,20 @@ for k = 1:StepCount-1
     StepFreq = 1000/PkValue(k+1,2);
     StepAV = var(acc(pos_start:pos_end));
     StepLength = 0.2844 + 0.2231*StepFreq + 0.0426*StepAV;
+    distance = distance + StepLength;
     
     % position update
     PositionX(k+1) = PositionX(k) + StepLength * cos(deg2rad(YawCos));
     PositionY(k+1) = PositionY(k) + StepLength * sin(deg2rad(YawSin));
 end
-sqrt(PositionX(end)^2+PositionY(end)^2)
+distance
 
 %% figures
 figure(1)
 plot(bandPass)
 figure(2)
-scatter(PositionY,PositionX) % north-up
+scatter(PositionY,PositionX); grid on; % north-up
+% x & y on the same scale
+xlim([-50 50])
+ylim([0 100])
+
